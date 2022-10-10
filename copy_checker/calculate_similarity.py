@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import copy
+import functools
 
 from copy_checker.code_normalization import CodeNormalization
 from copy_checker.fuzzy_match import FuzzyMatch
@@ -22,8 +23,23 @@ class CalculateSimilarity:
         return ct
 
     def printing_list(self, _list):
+        # To print the normalized lines
         for i in range(0, len(_list)):
             print(f"{i}.{_list[i]}")
+
+    def custom_lex_sort_func(self, x, y):
+        if x[0] < y[0]:
+            return -1
+        if x[0] == y[0] and x[1] < y[1]:
+            return -1
+        return 1
+
+    def print_all_pair_lcs(self, AP_LCS, lex_sort=False):
+        # To print all pair LCS
+        if lex_sort is True:
+            AP_LCS.sort(key=functools.cmp_to_key(self.custom_lex_sort_func))
+        for i in range(0, len(AP_LCS)):
+            print(AP_LCS[i])
 
     def execute_matching(self, threshold=0.8, alpha=0.7, A=None, B=None, print_flag=False):
         try:
@@ -42,6 +58,7 @@ class CalculateSimilarity:
                 raise Exception("file not found error")
             res1 = self.f_m.process(base_output=_listA_var_non_normalized, found_output=_listB_var_non_normalized)
             pairs1 = copy.deepcopy(self.f_m.match_results)
+            self.print_all_pair_lcs(AP_LCS=self.f_m.pairs, lex_sort=False)
             res2 = self.f_m.process(base_output=_listA_var_normalized, found_output=_listB_var_normalized)
             pairs2 = copy.deepcopy(self.f_m.match_results)
 
