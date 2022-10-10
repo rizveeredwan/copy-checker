@@ -10,4 +10,4 @@ continue	if	signed	virtual
 default	inline	sizedof	void
 delete	int	static	volatile 
 do	long	struct	while 
-using	namespace	std	include
+using	namespace	std	include	cout	endl	

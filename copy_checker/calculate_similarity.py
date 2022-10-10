@@ -21,11 +21,16 @@ class CalculateSimilarity:
             ct = ct + len(lines[i])
         return ct
 
+    def printing_list(self, _list):
+        for i in range(0, len(_list)):
+            print(f"{i}.{_list[i]}")
+
     def execute_matching(self, threshold=0.8, alpha=0.7, A=None, B=None, print_flag=False):
         try:
             if os.path.exists(A) and os.path.exists(B):
                 _listA_var_non_normalized = self.code_n.normalize(code_file=A, var_normalization_flag=False)
                 _listA_var_normalized = self.code_n.normalize(code_file=A, var_normalization_flag=True)
+                # self.printing_list(_list=_listA_var_normalized)
                 ctA_var_non_normalized = max(1.0, self.number_of_text(lines=_listA_var_non_normalized)) * 1.0
                 ctA_var_normalized = max(1.0, self.number_of_text(lines=_listA_var_normalized)) * 1.0
 
@@ -41,7 +46,7 @@ class CalculateSimilarity:
             pairs2 = copy.deepcopy(self.f_m.match_results)
 
             score1 = alpha * (res1 / ctA_var_non_normalized) + (1 - alpha) * (res2 / ctA_var_normalized)  # 0.5 * normal + 0.5 * variable normalization dp match
-            score2 = alpha * (res2 / ctB_var_non_normalized) + (1 - alpha) * (res2 / ctB_var_normalized)
+            score2 = alpha * (res1 / ctB_var_non_normalized) + (1 - alpha) * (res2 / ctB_var_normalized)
 
             if score1 >= threshold and score2 >= threshold:  # res/ct1 >= 0.97 and res/ct2 >= 0.97
                 print("Suspicious code detected ", 'S_A = ', score1, 'S_B = ', score2)
