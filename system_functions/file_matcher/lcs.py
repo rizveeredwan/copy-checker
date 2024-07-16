@@ -8,6 +8,26 @@ class LCS:
         self.path.clear()
 
     def recursion(self, i, j, M, N):
+        local_dp = [[], []]
+        m , n = len(M), len(N)
+        for i in range(0, n+1):
+            local_dp[0].append(0) # base case 
+            local_dp[1].append(0) # normal value keeping
+        f_sol = False 
+        best_res = 0 
+        for i in range(0, m):
+            if f_sol is True:
+                break 
+            for j in range(0, n):
+                if M[i] == N[j]:
+                    local_dp[(i+1)%2][j+1] = 1 + local_dp[i%2][j] 
+                else:
+                    local_dp[(i+1)%2][j+1] = max(local_dp[(i+1)%2][j], local_dp[i%2][j+1])
+                best_res = max(best_res, local_dp[(i+1)%2][j+1])
+                if local_dp[(i+1)%2][j+1] == len(M) or local_dp[(i+1)%2][j+1] == len(N):
+                    f_sol = True 
+                    break 
+        return best_res 
         if i >= len(M) or j >= len(N):
             return 0
         if self.dp.get(i) is not None and self.dp.get(i).get(j) is not None:

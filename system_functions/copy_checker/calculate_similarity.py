@@ -4,8 +4,8 @@ import os
 import copy
 import functools
 
-from copy_checker.code_normalization import CodeNormalization
-from copy_checker.fuzzy_match import FuzzyMatch
+from system_functions.copy_checker.code_normalization import CodeNormalization
+from system_functions.copy_checker.fuzzy_match import FuzzyMatch
 
 
 class CalculateSimilarity:

@@ -1,0 +1,8 @@
+type,id,c,c++,java,python
+UF,include,1,1,,
+UF,import,,,1,1
+UF,from,,,,1
+UF,package,,1,
+UF,using,1,1,,
+B,namespace,1,1,,
+UF,std,1,1,,
