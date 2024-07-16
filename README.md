@@ -23,8 +23,4 @@ python 3.x
 ```
 `print_flag` - Prints the matched lines when the programs are detected as suspicious, both for variable normalized and non normalized forms. Two text files are generated in the home directory.
 
-`A`, `B` - File paths
-
-`threshold`, `alpha` - Empirically set parameters to control the similarity metric as stated in the published paper.
-
 ---
