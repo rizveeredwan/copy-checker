@@ -4,6 +4,7 @@ import re
 import csv
 import sys
 from system_functions.copy_checker.match_source_with_norm import *
+from system_functions.copy_checker.ast_based_normalization import *
 
 
 def read_csv_file(file_name, lang="java"):
@@ -594,8 +595,21 @@ def normalize(code_file=""):
     #print(rule_json)
     # code_lines = read_code_file(code_file=code_file)
     main_given_code_lines = read_exact_lines(code_file= code_file)
-    # 0: just making single space 
-    code_lines = space_wise_clean_code(file_name = code_file)
+    var_r_code_lines = None
+    single_line_comments_ast_module = None
+    if lang == "python":
+        # if its python, want to upgrade the code lines differently here, a more normalized code version
+        # AST based code_lines will be formed for python with single line comments
+        ast_based_normalization = AstBasedNormalization()
+        generated_code, code_lines_py, single_line_comments_py = ast_based_normalization.norm_code(
+            file_name=code_file, var_norm=False, lang=lang)
+        generated_code, var_r_code_lines, _ = ast_based_normalization.norm_code(
+            file_name=code_file, var_norm=True, lang=lang)
+        code_lines = code_lines_py
+        single_line_comments_ast_module = single_line_comments_py
+    else:
+        # 0: just making single space
+        code_lines = space_wise_clean_code(file_name = code_file)
     #print(len(code_lines))
 
     # 1: clearing up operator placements with spaces, to properly understand them, merging if they are side by side  
@@ -603,10 +617,13 @@ def normalize(code_file=""):
     # print("START STATUS ", code_lines)
 
     # 2: multi line comment removal
-    code_lines, block_comments = remove_block_of_comments(code_lines=code_lines, lang="java")
+    code_lines, block_comments = remove_block_of_comments(code_lines=code_lines, lang=lang)
 
     # 3: single line comment removal 
     code_lines, single_line_comments = removing_single_line_comment(code_lines=code_lines, lang=lang)
+    if single_line_comments_ast_module is not None: # AST module generated something
+        single_line_comments = single_line_comments_ast_module
+    print(code_lines)
 
     
     #print(store_comments1, store_comments2)
@@ -621,10 +638,12 @@ def normalize(code_file=""):
     # 5: Adding {} for proper curly brace enclosure
     code_lines = properly_conditioning_fragments(code_lines=code_lines, 
                                                  branching_keywords = ['if', 'else if', 'elif', 'for', 'while'], lang="java", rule_json=rule_json)
-    # 6: Variable replaced code line 
-    var_replaced_code_lines = code_lines.copy()
-    var_replaced_code_lines = normalize_var_in_code(code_lines=var_replaced_code_lines, rule_json=rule_json, lang="java",  oop_keywords=['struct', 'class', 'new'])
-    
+    # 6: Variable replaced code line
+    if lang != 'python':
+        var_replaced_code_lines = code_lines.copy()
+        var_replaced_code_lines = normalize_var_in_code(code_lines=var_replaced_code_lines, rule_json=rule_json, lang="java",  oop_keywords=['struct', 'class', 'new'])
+    elif var_r_code_lines is not None:
+        var_replaced_code_lines = var_r_code_lines
     # x : The last new line breaking, block by block 
     code_lines = new_line_addition(code_lines=code_lines, delim='{', maps = maps)
     code_lines = new_line_addition(code_lines=code_lines, delim=';', maps = maps)
