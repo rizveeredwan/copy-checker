@@ -2,7 +2,6 @@
 import json
 import os
 import time
-import threading
 
 from pymongo import MongoClient
 
@@ -28,18 +27,19 @@ def create_db_entry(mongodb_instance=None):
         pass
 
 
-def entity_process(i, j, json_codes, alpha=0.5, level_threshold=3, process_result=[]):
+def entity_process(code_simplified1=[], code_simplified_var_nor1=[], code_simplified2=[], code_simplified_var_nor2=[], alpha=0.5,
+                   level_threshold=3, map_char_dict_real_norm1={}, map_char_dict_real_norm2={}, process_result=[]):
     # used for threading here
     f_m = FuzzyMatch()  # Fuzzy matcher
     # coding syntax matching
-    similarity, all_match_fragments, setblueprint1, setblueprint2, id_off = f_m.process(norm_lines1=json_codes[i]['code_simplified'],
-                                                                                        var_norm_lines1=json_codes[i]['code_simplified_var_nor'],
-                                                                                        norm_lines2=json_codes[j]['code_simplified'],
-                                                                                        var_norm_lines2=json_codes[j]['code_simplified_var_nor'],
+    similarity, all_match_fragments, setblueprint1, setblueprint2, id_off = f_m.process(norm_lines1=code_simplified1,
+                                                                                        var_norm_lines1=code_simplified_var_nor1,
+                                                                                        norm_lines2=code_simplified2,
+                                                                                        var_norm_lines2=code_simplified_var_nor2,
                                                                                         alpha=alpha,
                                                                                         level_threshold=level_threshold,
-                                                                                        map_dict1=json_codes[i]['map_char_dict_real_norm'],
-                                                                                        map_dict2=json_codes[j]['map_char_dict_real_norm'])
+                                                                                        map_dict1=map_char_dict_real_norm1,
+                                                                                        map_dict2=map_char_dict_real_norm2)
     print("similarity ", similarity)
     print("all match fragments ", all_match_fragments)
     # comments matching - block comments
@@ -64,13 +64,12 @@ def entity_process(i, j, json_codes, alpha=0.5, level_threshold=3, process_resul
                                                                  created_id_offset=id_off + 2, char_match_style="exact")
     setblueprint1 = merge_map(primary_map=setblueprint1, secondary_map=t_setblueprint1)
     setblueprint2 = merge_map(primary_map=setblueprint2, secondary_map=t_setblueprint2)
-    # 0:i, 1:j,
-    process_result.append(i)
-    process_result.append(j)
-    process_result.append(similarity) # 2
-    process_result.append(all_match_fragments) # 3
-    process_result.append(setblueprint1) # 4
-    process_result.append(setblueprint2) # 5
+    json_codes[i]['match_status'][j][0] = similarity
+    json_codes[i]['match_status'][j][1] = all_match_fragments
+    json_codes[i]['match_status'][j][2] = setblueprint1
+    process_result.append(similarity) #0:i, 1:j,
+    process_result.append(setblueprint1)
+    process_result.append(setblueprint2)
     return
 
 def number_of_text(lines):
@@ -106,7 +105,7 @@ def merge_map(primary_map={}, secondary_map={}):
             primary_map[key][key2] = secondary_map[key][key2]
     return primary_map 
 
-def matching(alpha=0.7, json_codes={}, space_removed=True, level_threshold=0, num_threads=1):
+def matching(alpha=0.7, json_codes={}, space_removed=True, level_threshold=0):
     """
     input:
         - alpha: ratio of weighted matric 
@@ -137,45 +136,41 @@ def matching(alpha=0.7, json_codes={}, space_removed=True, level_threshold=0, nu
     for i in range(0, len(keys)):
          code_simplified1 = json_codes[i]['code_simplified']
          code_simplified_var_nor1 = json_codes[i]['code_simplified_var_nor']
-         map_char_dict_real_norm1 = json_codes[i]['map_char_dict_real_norm'] # map
-         j = i + 1
-         stored_threads = []
-         while j < len(keys):
-             code_simplified2 = json_codes[j]['code_simplified']
-             code_simplified_var_nor2 = json_codes[j]['code_simplified_var_nor']
-             map_char_dict_real_norm2 = json_codes[j]['map_char_dict_real_norm']  # map2
-             dis_idx = -1
-             if len(stored_threads) < num_threads:
-                 stored_threads.append([None, None])
-                 dis_idx = len(stored_threads)-1
-             else:
-                 for k in range(0, len(stored_threads)): # checkness of free ind
-                     if stored_threads[k][0].is_alive() is False: # not an alive thread
-                         # store old thread's data
-                         x, y = stored_threads[k][1][0], stored_threads[k][1][1]
-                         json_codes[x]['match_status'][y][0] = stored_threads[k][1][2]
-                         json_codes[x]['match_status'][y][1] = stored_threads[k][1][3]
-                         json_codes[x]['match_status'][y][2] = stored_threads[k][1][4]
-                         json_codes[x]['match_status'][y][3] = show_matched_code_with_col(
-                             source_code=json_codes[x]['raw_source_code'], setblueprint=stored_threads[k][1][4])
-
-                         json_codes[y]['match_status'][x][0] = stored_threads[k][1][2]
-                         json_codes[y]['match_status'][x][1] = stored_threads[k][1][3]
-                         json_codes[y]['match_status'][x][2] = stored_threads[k][1][5]
-                         json_codes[y]['match_status'][x][3] = show_matched_code_with_col(
-                             source_code=json_codes[y]['raw_source_code'], setblueprint=stored_threads[k][1][5])
-                         print("ended ", x, y)
-                         dis_idx = k  # place to put new thread
-                         break
-             if dis_idx != -1: # A new thread can be initiated
-                 process_result = []
-                 args = (i, j, json_codes, alpha, level_threshold, process_result)
-                 thread = threading.Thread(target=entity_process, args=args)
-                 stored_threads[dis_idx][0] = thread
-                 stored_threads[dis_idx][1] = process_result
-                 thread.start()
-                 print("started ", i, j)
-                 j += 1 # new object to check within
+         map_char_dict_real_norm1 = json_codes[i]['map_char_dict_real_norm'] # map 
+         for j in range(i+1, len(keys)):
+            code_simplified2 = json_codes[j]['code_simplified']
+            code_simplified_var_nor2 = json_codes[j]['code_simplified_var_nor']
+            map_char_dict_real_norm2 = json_codes[j]['map_char_dict_real_norm'] # map2
+            # process function
+            print(f"started matching {keys[i]} {keys[j]}")
+            # coding syntax matching 
+            similarity, all_match_fragments, setblueprint1, setblueprint2, id_off = f_m.process(norm_lines1=code_simplified1, var_norm_lines1=code_simplified_var_nor1, norm_lines2=code_simplified2, var_norm_lines2=code_simplified_var_nor2, 
+                        alpha=alpha, level_threshold=level_threshold, map_dict1=map_char_dict_real_norm1, map_dict2=map_char_dict_real_norm2)
+            
+            print("similarity ", similarity)
+            print("all match fragments ", all_match_fragments)
+            # comments matching - block comments 
+            _,_,t_setblueprint1, t_setblueprint2,id_off = f_m.process(norm_lines1=json_codes[i]['block_comments'], var_norm_lines1=None, norm_lines2=json_codes[j]['block_comments'], var_norm_lines2=None, 
+                        alpha=alpha, level_threshold=level_threshold, map_dict1=json_codes[i]['map_block_com'], map_dict2=json_codes[j]['map_block_com'], 
+                        created_id_offset=id_off+2, char_match_style="exact")
+            setblueprint1 = merge_map(primary_map=setblueprint1, secondary_map=t_setblueprint1)
+            setblueprint2 = merge_map(primary_map=setblueprint2, secondary_map=t_setblueprint2)
+            # comments matching - single line 
+            _,_,t_setblueprint1, t_setblueprint2, id_off = f_m.process(norm_lines1=json_codes[i]['single_line_comments'], var_norm_lines1=None, norm_lines2=json_codes[j]['single_line_comments'], var_norm_lines2=None, 
+                        alpha=alpha, level_threshold=level_threshold, map_dict1=json_codes[i]['map_single_com'], map_dict2=json_codes[j]['map_single_com'], 
+                        created_id_offset=id_off+2, char_match_style="exact")
+            setblueprint1 = merge_map(primary_map=setblueprint1, secondary_map=t_setblueprint1)
+            setblueprint2 = merge_map(primary_map=setblueprint2, secondary_map=t_setblueprint2)
+            
+            json_codes[i]['match_status'][j][0] = similarity 
+            json_codes[i]['match_status'][j][1] = all_match_fragments
+            json_codes[i]['match_status'][j][2] = setblueprint1
+            json_codes[i]['match_status'][j][3] = show_matched_code_with_col(source_code=json_codes[i]['raw_source_code'], setblueprint=setblueprint1)
+            
+            json_codes[j]['match_status'][i][0] = similarity # similarity score 
+            json_codes[j]['match_status'][i][1] = all_match_fragments
+            json_codes[j]['match_status'][i][2] = setblueprint2
+            json_codes[j]['match_status'][i][3] = show_matched_code_with_col(source_code=json_codes[j]['raw_source_code'], setblueprint=setblueprint2)
     return json_codes
 
 def source_code_mapped_array(raw_code=[], setblueprint={}):
@@ -219,7 +214,7 @@ def prepare_json_array_to_send(json_codes={}, path_of_files=[]):
     return msg_json
 
     
-def start_copy_checking(path_of_files=[], alpha=0.7, level_threshold=0, num_threads=1):
+def start_copy_checking(path_of_files=[], alpha=0.7, level_threshold=0):
     """
     input
         - path_of_files as a list 
@@ -244,7 +239,7 @@ def start_copy_checking(path_of_files=[], alpha=0.7, level_threshold=0, num_thre
             json_codes[i]['raw_source_code'] = read_exact_lines(code_file=path_of_files[i])
     print("initiating")
     start_time = time.process_time()
-    json_codes = matching(alpha=alpha, json_codes=json_codes, space_removed=True, level_threshold=level_threshold, num_threads=num_threads)
+    json_codes = matching(alpha=alpha, json_codes=json_codes, space_removed=True, level_threshold=level_threshold)
     end_time = time.process_time()
     print("completed, processing time : ", end_time-start_time)
     # print("json_codes ", json_codes)

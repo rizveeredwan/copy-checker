@@ -98,13 +98,13 @@ def process(BASE_DIRECTORY=os.path.join('dummy_data'), TRACKER_FILE=os.path.join
             print("Escaping run: ", files[i])
 
 
-def find_copy_stat(BASE_DIRECTORY = os.path.join('.', 'dummy_data'), alpha=0.7, level_threshold=1, stat_file_name="output.csv"):
+def find_copy_stat(BASE_DIRECTORY = os.path.join('.', 'dummy_data'), alpha=0.7, level_threshold=1, num_threads=1, stat_file_name="output.csv"):
     # to find the copy statistics 
     files = os.listdir(BASE_DIRECTORY)
     for i in range(0, len(files)):
         files[i] = os.path.join(BASE_DIRECTORY, files[i])
         print(files[i])
-    result = start_copy_checking(path_of_files=files, alpha=alpha, level_threshold=level_threshold)
+    result = start_copy_checking(path_of_files=files, alpha=alpha, level_threshold=level_threshold, num_threads=num_threads)
     data = []
     header = [""]
     for i in range(0, len(files)):
@@ -129,7 +129,8 @@ if __name__ == '__main__':
     parser.add_argument('--base_directory', '-b', type=str, default=os.path.join('.', 'dummy_data'), help='Base Code Directory')
     parser.add_argument('--alpha', '-a', type=float, default=0.7, help='Weight Value for Matching') # weight of variable normalized and non-normalized version's matching
     parser.add_argument('--level_threshold', '-l', type=int, default=0, help='Level Threshold for Granularity') # Lower value: slower and more depthful searching, higer value vice versa
-    parser.add_argument('--output_file', '-of', type=str, default=os.path.join('.', 'output.csv'), help='Output CSV File Name') # where the results will be kept (nxn) scores 
+    parser.add_argument('--num_threads', '-nt', type=int, default=1, help='Number of Threads')
+    parser.add_argument('--output_file', '-of', type=str, default=os.path.join('.', 'output.csv'), help='Output CSV File Name') # where the results will be kept (nxn) scores
     parser.add_argument('--file_status_tracker', '-f', type=str, default=os.path.join('.', 'file_status_tracker.csv'), help='File Status Tracker')
 
 
@@ -159,9 +160,10 @@ if __name__ == '__main__':
     #process()
     print(op_type)
     if op_type == 0: 
-        find_copy_stat(alpha=alpha, level_threshold=level_threshold, BASE_DIRECTORY=BASE_DIRECTORY, stat_file_name=output_file_name)
+        find_copy_stat(alpha=alpha, level_threshold=level_threshold, BASE_DIRECTORY=BASE_DIRECTORY, num_threads=2, stat_file_name=output_file_name)
     if op_type == 1:
         process(BASE_DIRECTORY=BASE_DIRECTORY, TRACKER_FILE=file_status_tracker , input_data="", output_data="")
 
-# python3 interactive_checker.py -ot 0 -b dummy_data_8 -a 0.7 -l 3 -of output_8.csv -f file_status_tracker_8.csv
-# python3 interactive_checker.py -ot 0 -b dummy_data_9 -a 0.7 -l 3 -of output_9.csv -f file_status_tracker_9.csv
+# python3 interactive_checker.py -ot 0 -b dummy_data_8 -a 0.7 -l 3 -nt 2 -of output_8.csv -f file_status_tracker_8.csv
+# python3 interactive_checker.py -ot 0 -b dummy_data_9 -a 0.7 -l 3 -nt 2 -of output_9.csv -f file_status_tracker_9.csv
+# python3 interactive_checker.py -ot 0 -b dummy_data -a 0.7 -l 3 -nt 2 -of output.csv -f file_status_tracker.csv
