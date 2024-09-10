@@ -9,6 +9,7 @@ This is the python implementation of the published paper *"A Robust Objective Fo
 ```commandline
 16/07/2024 - This algorithm has been modified on (July 16, 2024). Currently, this repository contains a more updated and sophisticated version of the implementation.
 10/09/2024 - Abstract syntax Tree based solution has been designed for handling python code
+    - Also added threading based parallel processing to faster calculate the processing
 ```
 
 ## Requirements
