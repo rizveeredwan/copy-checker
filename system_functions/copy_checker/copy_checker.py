@@ -4,28 +4,11 @@ import os
 import time
 import threading
 
-from pymongo import MongoClient
+
 
 from system_functions.copy_checker.code_normalization import *
 from system_functions.copy_checker.fuzzy_match import FuzzyMatch
 from system_functions.copy_checker.visual_html import *
-
-
-def connect_monogdb(connection_string="mongodb://localhost:27017/", dbname="copy_checker_db"):
-    # Replace the connection string below with your MongoDB connection string
-    # For example: "mongodb://username:password@host:port/dbname"
-    # Connect to the MongoDB instance
-    mongodb_instance = None
-    try:
-        mongodb_instance = MongoClient(connection_string + '/' + dbname)
-    except Exception as e:
-        print(e)
-    return mongodb_instance
-
-
-def create_db_entry(mongodb_instance=None):
-    if mongodb_instance is not None:
-        pass
 
 
 def entity_process(i, j, json_codes, alpha=0.5, level_threshold=3, process_result=[]):
@@ -133,49 +116,72 @@ def matching(alpha=0.7, json_codes={}, space_removed=True, level_threshold=0, nu
         """
         
     f_m = FuzzyMatch() # Fuzzy matcher 
-    
+    stored_threads = []
+
+    for i in range(0, num_threads):
+        stored_threads.append([None, None])
     for i in range(0, len(keys)):
          code_simplified1 = json_codes[i]['code_simplified']
          code_simplified_var_nor1 = json_codes[i]['code_simplified_var_nor']
          map_char_dict_real_norm1 = json_codes[i]['map_char_dict_real_norm'] # map
          j = i + 1
-         stored_threads = []
          while j < len(keys):
+             print("############### ", i, j, len(stored_threads), num_threads)
+             print("Threads = ", stored_threads)
              code_simplified2 = json_codes[j]['code_simplified']
              code_simplified_var_nor2 = json_codes[j]['code_simplified_var_nor']
              map_char_dict_real_norm2 = json_codes[j]['map_char_dict_real_norm']  # map2
-             dis_idx = -1
-             if len(stored_threads) < num_threads:
-                 stored_threads.append([None, None])
-                 dis_idx = len(stored_threads)-1
-             else:
-                 for k in range(0, len(stored_threads)): # checkness of free ind
-                     if stored_threads[k][0].is_alive() is False: # not an alive thread
-                         # store old thread's data
-                         x, y = stored_threads[k][1][0], stored_threads[k][1][1]
-                         json_codes[x]['match_status'][y][0] = stored_threads[k][1][2]
-                         json_codes[x]['match_status'][y][1] = stored_threads[k][1][3]
-                         json_codes[x]['match_status'][y][2] = stored_threads[k][1][4]
-                         json_codes[x]['match_status'][y][3] = show_matched_code_with_col(
-                             source_code=json_codes[x]['raw_source_code'], setblueprint=stored_threads[k][1][4])
+             for k in range(0, len(stored_threads)):  # checkness of free ind
+                 if stored_threads[k][0] is not None and stored_threads[k][0].is_alive() is False:  # not an alive thread
+                     # store old thread's data
+                     x, y = stored_threads[k][1][0], stored_threads[k][1][1]
+                     json_codes[x]['match_status'][y][0] = stored_threads[k][1][2]
+                     json_codes[x]['match_status'][y][1] = stored_threads[k][1][3]
+                     json_codes[x]['match_status'][y][2] = stored_threads[k][1][4]
+                     json_codes[x]['match_status'][y][3] = show_matched_code_with_col(
+                         source_code=json_codes[x]['raw_source_code'], setblueprint=stored_threads[k][1][4])
 
-                         json_codes[y]['match_status'][x][0] = stored_threads[k][1][2]
-                         json_codes[y]['match_status'][x][1] = stored_threads[k][1][3]
-                         json_codes[y]['match_status'][x][2] = stored_threads[k][1][5]
-                         json_codes[y]['match_status'][x][3] = show_matched_code_with_col(
-                             source_code=json_codes[y]['raw_source_code'], setblueprint=stored_threads[k][1][5])
-                         print("ended ", x, y)
-                         dis_idx = k  # place to put new thread
-                         break
-             if dis_idx != -1: # A new thread can be initiated
-                 process_result = []
-                 args = (i, j, json_codes, alpha, level_threshold, process_result)
-                 thread = threading.Thread(target=entity_process, args=args)
-                 stored_threads[dis_idx][0] = thread
-                 stored_threads[dis_idx][1] = process_result
-                 thread.start()
-                 print("started ", i, j)
-                 j += 1 # new object to check within
+                     json_codes[y]['match_status'][x][0] = stored_threads[k][1][2]
+                     json_codes[y]['match_status'][x][1] = stored_threads[k][1][3]
+                     json_codes[y]['match_status'][x][2] = stored_threads[k][1][5]
+                     json_codes[y]['match_status'][x][3] = show_matched_code_with_col(
+                         source_code=json_codes[y]['raw_source_code'], setblueprint=stored_threads[k][1][5])
+                     print("ended ******* ", x, y)
+                     stored_threads[k][0], stored_threads[k][1] = None, None
+             for k in range(0, len(stored_threads)):  # checkness of free ind
+                 if stored_threads[k][0] is None:
+                     process_result = []
+                     args = (i, j, json_codes, alpha, level_threshold, process_result)
+                     thread = threading.Thread(target=entity_process, args=args)
+                     stored_threads[k][0] = thread
+                     stored_threads[k][1] = process_result
+                     thread.start()
+                     print("started ", i, j)
+                     j += 1  # new object to check within
+                     break
+    while True:
+        free = 0
+        for k in range(0, len(stored_threads)):
+            if stored_threads[k][0] is None:
+                free += 1
+            elif stored_threads[k][0].is_alive() is False:
+                x, y = stored_threads[k][1][0], stored_threads[k][1][1]
+                json_codes[x]['match_status'][y][0] = stored_threads[k][1][2]
+                json_codes[x]['match_status'][y][1] = stored_threads[k][1][3]
+                json_codes[x]['match_status'][y][2] = stored_threads[k][1][4]
+                json_codes[x]['match_status'][y][3] = show_matched_code_with_col(
+                    source_code=json_codes[x]['raw_source_code'], setblueprint=stored_threads[k][1][4])
+
+                json_codes[y]['match_status'][x][0] = stored_threads[k][1][2]
+                json_codes[y]['match_status'][x][1] = stored_threads[k][1][3]
+                json_codes[y]['match_status'][x][2] = stored_threads[k][1][5]
+                json_codes[y]['match_status'][x][3] = show_matched_code_with_col(
+                    source_code=json_codes[y]['raw_source_code'], setblueprint=stored_threads[k][1][5])
+                print("ended ******* ", x, y)
+                stored_threads[k][0], stored_threads[k][1] = None, None
+                free += 1
+        if free == len(stored_threads):
+            break
     return json_codes
 
 def source_code_mapped_array(raw_code=[], setblueprint={}):
@@ -246,7 +252,7 @@ def start_copy_checking(path_of_files=[], alpha=0.7, level_threshold=0, num_thre
     start_time = time.process_time()
     json_codes = matching(alpha=alpha, json_codes=json_codes, space_removed=True, level_threshold=level_threshold, num_threads=num_threads)
     end_time = time.process_time()
-    print("completed, processing time : ", end_time-start_time)
+    print("completed, processing time : ", end_time-start_time) 
     # print("json_codes ", json_codes)
     return prepare_json_array_to_send(json_codes=json_codes)
     # return json_codes
