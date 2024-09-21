@@ -22,7 +22,7 @@ def entity_process(i, j, json_codes, alpha=0.5, level_threshold=3, process_resul
                                                                                         alpha=alpha,
                                                                                         level_threshold=level_threshold,
                                                                                         map_dict1=json_codes[i]['map_char_dict_real_norm'],
-                                                                                        map_dict2=json_codes[j]['map_char_dict_real_norm'])
+                                                                                        map_dict2=json_codes[j]['map_char_dict_real_norm'], char_match_style="exact")
     print("similarity ", similarity)
     print("all match fragments ", all_match_fragments)
     # comments matching - block comments
@@ -121,16 +121,10 @@ def matching(alpha=0.7, json_codes={}, space_removed=True, level_threshold=0, nu
     for i in range(0, num_threads):
         stored_threads.append([None, None])
     for i in range(0, len(keys)):
-         code_simplified1 = json_codes[i]['code_simplified']
-         code_simplified_var_nor1 = json_codes[i]['code_simplified_var_nor']
-         map_char_dict_real_norm1 = json_codes[i]['map_char_dict_real_norm'] # map
          j = i + 1
          while j < len(keys):
              print("############### ", i, j, len(stored_threads), num_threads)
              print("Threads = ", stored_threads)
-             code_simplified2 = json_codes[j]['code_simplified']
-             code_simplified_var_nor2 = json_codes[j]['code_simplified_var_nor']
-             map_char_dict_real_norm2 = json_codes[j]['map_char_dict_real_norm']  # map2
              for k in range(0, len(stored_threads)):  # checkness of free ind
                  if stored_threads[k][0] is not None and stored_threads[k][0].is_alive() is False:  # not an alive thread
                      # store old thread's data

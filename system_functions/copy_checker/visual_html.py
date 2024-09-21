@@ -24,6 +24,8 @@ def show_matched_code_with_col_using_arr_data(tagged_source_code=[]):
         if tagged_source_code[i][0] in space_characters:
             _string +='&nbsp;'
             continue
+        if tagged_source_code[i][0] == '\n':
+            _string += '<br>'
         if tagged_source_code[i][1] == -1: # not matched
             _string += '<span style="color:black;">' + tagged_source_code[i][0] + '</span>'
         else:

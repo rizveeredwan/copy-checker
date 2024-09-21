@@ -274,6 +274,7 @@ def read_csv_file_for_result_acc(path, testcase=1):
             accurate += float(value)
     return round((accurate*100.0)/total,2)
 
+
 def result_accumulation():
     print("Without Running the judge first, the score will not be calculated properly")
     f = open(os.path.join('.', 'evaluation_score.csv'), 'w', newline='\n')
@@ -317,6 +318,7 @@ def extract_int_portion(string_name):
         except Exception as e:
             pass 
     return val
+
 
 def add_local_script_to_run_asst(problem_folder="", problem_id=1, problem_metadata={}):
     """
@@ -463,4 +465,19 @@ def get_actual_python_version():
         except Exception as e:
             # print("Issue in python finding module ", e)
             pass 
-    return None 
+    return None
+
+
+def write_list_data_to_a_file(_list=[], file_name='open.txt'):
+    with open(file_name, 'w') as f:
+        for i in range(0, len(_list)):
+            f.write(str(_list[i])+'\n')
+    return
+
+
+def write_map_data_to_a_file(map={}, source1=[], source2=[]):
+    # format: {i th line: {j th character : [line2, character]}
+    with open('MAP_LOG.txt', 'w') as f:
+        for key in map:
+            for key2 in map[key]:
+                f.write(str(key) + " " + str(key2) + ':' + str(map[key][key2][0]) + " " + str(map[key][key2][1])+'\n')

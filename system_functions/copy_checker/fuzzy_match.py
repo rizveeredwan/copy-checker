@@ -8,18 +8,19 @@ import functools
 from system_functions.file_matcher.lcs import LCS
 from system_functions.copy_checker.match_source_with_norm import *
 
-alpha_param = 0.7 
+alpha_param = 0.7
 ignoring_characters = ['{', '}']
+
 
 def func_sort_pair(x, y):
     global alpha_param
     sc_x = alpha_param * x[3] + (1.0-alpha_param) * x[5]
     sc_y = alpha_param * y[3] + (1.0-alpha_param) * y[5]
     if sc_x > sc_y:
-        return -1 
+        return -1
     if sc_x < sc_y:
-        return 1 
-    return 0 
+        return 1
+    return 0
 
 
 class FuzzyMatch:
@@ -28,7 +29,7 @@ class FuzzyMatch:
         self.dp = {}
         self.pairs = []
         self.match_results = []
-        self.alpha = 1.0 
+        self.alpha = 1.0
 
     def print_lines(self, lines):
         for i in range(0, len(lines)):
@@ -49,25 +50,25 @@ class FuzzyMatch:
         data_dict = {}
         for i in range(0, len(temp)):
             if temp[i] in ignoring_characters:
-                continue 
+                continue
             if data_dict.get(temp[i]) is None:
-                data_dict[temp[i]] = 0 
+                data_dict[temp[i]] = 0
             data_dict[temp[i]] += 1
-        return data_dict 
-    
+        return data_dict
+
     def heuristic_match_betweek_two_dict(self, data_dict_i={}, data_dict_j={}):
-        tot_common = 0 
-        LEN1 = 0 
+        tot_common = 0
+        LEN1 = 0
         for key in data_dict_i:
-            mt = 0 
+            mt = 0
             LEN1 += data_dict_i[key]
             if data_dict_j.get(key) is not None:
                 mt = min(data_dict_i[key], data_dict_j[key])
-            tot_common += mt 
-        LEN2 = 0 
+            tot_common += mt
+        LEN2 = 0
         for key in data_dict_j:
             LEN2 += data_dict_j[key]
-        return tot_common, LEN1, LEN2   
+        return tot_common, LEN1, LEN2
 
     def process_n_sq_match(self, base_output, found_output, level_threshold=0, small_match_val=0.0001, print_interval=1000):
         """
@@ -78,17 +79,17 @@ class FuzzyMatch:
         level_threshold_vec = [0, 0.25, 0.5, 0.75, 0.9, 1.00]
         lcs_results_array = {}
         self.pairs.clear()
-        temp_base_output, temp_found_output = [], [] 
-        temp_base_output = base_output 
+        temp_base_output, temp_found_output = [], []
+        temp_base_output = base_output
         temp_found_output = found_output
-                     
+
         for i in range(0, len(temp_base_output)):
             lcs_results_array[i] = {}
             for j in range(0, len(temp_found_output)):
                 lcs_results_array[i][j] = []
         M, N = None, None
         LEN_TEMP_BASE = len(temp_base_output)
-        LEN_TEMP_FOUND = len(temp_found_output) 
+        LEN_TEMP_FOUND = len(temp_found_output)
         ct = 0
         all_data_dict_base = []
         all_data_dict_found = []
@@ -99,24 +100,23 @@ class FuzzyMatch:
         for i in range(0, LEN_TEMP_BASE):
             _m = temp_base_output[i]
             for j in range(0, LEN_TEMP_FOUND):
-                _n = temp_found_output[j] 
+                _n = temp_found_output[j]
                 tot_common, LEN1, LEN2 = self.heuristic_match_betweek_two_dict(data_dict_i=all_data_dict_base[i], data_dict_j=all_data_dict_found[j])
                 if LEN1 == 0 or LEN2 == 0:
-                    lcs_results_array[i][j] = [small_match_val*tot_common, small_match_val, 1]
+                    lcs_results_array[i][j] = [small_match_val*tot_common, small_match_val, 1, None]
                     continue
                 opt1 = tot_common / (LEN1*1.0)
                 opt2 = tot_common / (LEN2*1.0)
                 max_opt = max(opt1, opt2)
                 max_length = max(1, max(len(_m), len(_n)))
-                if max_opt < level_threshold_vec[level_threshold]: # less than expectations 
+                if max_opt < level_threshold_vec[level_threshold]: # less than expectations
                     res = tot_common
-                    #print("atkaise ", i, j, temp_base_output[i], temp_found_output[j])
-                    lcs_results_array[i][j] = [small_match_val*tot_common, small_match_val, max_length] # very insignificant matching weight * min_matching
+                    lcs_results_array[i][j] = [small_match_val*tot_common, small_match_val, max_length, None] # very insignificant matching weight * min_matching
                 else:
                     # print(i, j, temp_base_output[i], temp_found_output[j])
-                    res = self.lcs_module.begin_matching(M=_m, N=_n)
+                    res, matches = self.lcs_module.begin_matching(M=_m, N=_n) # maximum matching, matched characters' indexes
                     # arr = self.lcs_module.return_copy_of_dp()
-                    lcs_results_array[i][j] = [res, res*1.0/max_length, max_length] # normal result saving 
+                    lcs_results_array[i][j] = [res, res*1.0/max_length, max_length, matches] # maximum match, normalizing, total length of the string
                 ct += 1
                 if print_interval !=-1 and ct % print_interval == 0:
                     print(f"completed {ct} pairs among {LEN_TEMP_BASE * LEN_TEMP_FOUND} threshold considered {level_threshold_vec[level_threshold]}")
@@ -127,8 +127,8 @@ class FuzzyMatch:
         # res = self.sorting_based_solution()
         # self.print_matched_pairs(base=base_output, found=found_output)
         # print("verdict ",verdict)
-        return lcs_results_array # res vs new thing 
-    
+        return lcs_results_array # res vs new thing
+
     def place_uid_in_source_code(self, map_dict={}, setblueprint={}, norm_code_line=0, uid=0):
         # all the characters of the line (in normalized code) are considered found 
         # print("length ", len(setblueprint))
@@ -140,7 +140,7 @@ class FuzzyMatch:
                     # print(f"{key} {_line} {_ch}")
                     if setblueprint.get(_line) is None:
                         setblueprint[_line] = {}
-                    setblueprint[_line][_ch] = uid 
+                    setblueprint[_line][_ch] = uid
                 except Exception as e:
                     print("error in place uid ", e)
         return setblueprint
@@ -149,52 +149,54 @@ class FuzzyMatch:
         # only the matched characters are considered as found, not blindly all the characters 
         for i in range(0, len(exact_matched_idx)):
             if map_dict.get(norm_code_line) is not None and map_dict[norm_code_line].get(exact_matched_idx[i]) is not None:
-                _line = map_dict[norm_code_line][exact_matched_idx[i]][0]
-                _ch = map_dict[norm_code_line][exact_matched_idx[i]][1]
+                _line = map_dict[norm_code_line][exact_matched_idx[i]][0] # main code _line
+                _ch = map_dict[norm_code_line][exact_matched_idx[i]][1] # main code _line, character number
                 if setblueprint.get(_line) is None:
                     setblueprint[_line] = {}
                 setblueprint[_line][_ch] = uid
                 # print("gotcha ", _line, _ch, " with ", norm_code_line, exact_matched_idx[i])
             else:
                 # print("Yes none")
-                pass 
+                pass
         return setblueprint
-    
-    def process(self, norm_lines1=[], var_norm_lines1=[], norm_lines2=[], var_norm_lines2=[], alpha=0.7, level_threshold=0, map_dict1={}, map_dict2={}, 
+
+    def process(self, norm_lines1=[], var_norm_lines1=[], norm_lines2=[], var_norm_lines2=[], alpha=0.7, level_threshold=0, map_dict1={}, map_dict2={},
                 created_id_offset=-1, char_match_style="fuzzy"):
         print("processing n_sq_match: started")
         lcs_simp = self.process_n_sq_match(base_output=norm_lines1, found_output=norm_lines2, level_threshold=level_threshold, small_match_val=0.0001, print_interval=1000)
         print("processing n_sq_match: ended")
-        lcs_var_norm = None 
+        lcs_var_norm = None
         if var_norm_lines1 is not None and var_norm_lines2 is not None:
             print("processing n_sq_match (var_norm): started")
-            lcs_var_norm = self.process_n_sq_match(base_output=var_norm_lines1, found_output=var_norm_lines2, level_threshold=level_threshold, 
-                                                                 small_match_val=0.0001, print_interval=1000) 
+            lcs_var_norm = self.process_n_sq_match(base_output=var_norm_lines1, found_output=var_norm_lines2, level_threshold=level_threshold,
+                                                                 small_match_val=0.0001, print_interval=1000)
             print("processing n_sq_match (var_norm): ended")
-            
-        similarity, match_results, setblueprint1, setblueprint2, created_id = self.greedy_matching(lcs_simp=lcs_simp, lcs_var_norm=lcs_var_norm, alpha=alpha, base_output=norm_lines1, 
+
+        similarity, match_results, setblueprint1, setblueprint2, created_id = self.greedy_matching(lcs_simp=lcs_simp, lcs_var_norm=lcs_var_norm, alpha=alpha, base_output=norm_lines1,
                                                          found_output=norm_lines2, map_dict1=map_dict1, map_dict2=map_dict2, created_id_offset=created_id_offset, char_match_style=char_match_style)
         print("similarity ", similarity)
         print("match results ", match_results)
         return similarity, match_results, setblueprint1, setblueprint2, created_id
-    
+
     def raw_char_count(self, _string):
         temp = _string.strip()
         return len(temp)
 
-    def greedy_matching(self, lcs_simp={}, lcs_var_norm={}, alpha=0.7, base_output=[], found_output=[], map_dict1={}, map_dict2={}, 
+    def greedy_matching(self, lcs_simp={}, lcs_var_norm={}, alpha=0.7, base_output=[], found_output=[], map_dict1={}, map_dict2={},
                         created_id_offset=-1, char_match_style="fuzzy"):
         setblueprint1, setblueprint2 = {}, {}
         # updating with given alpha 
-        self.alpha = alpha 
+        self.alpha = alpha
         pairs = []
         for i in lcs_simp:
             for j in lcs_simp[i]:
+                # print(len(lcs_simp[i][j]))
                 if lcs_var_norm is not None and lcs_var_norm.get(i) is not None and lcs_var_norm[i].get(j) is not None:
-                    pairs.append([i, j, lcs_simp[i][j][0], lcs_simp[i][j][1], lcs_var_norm[i][j][0], lcs_var_norm[i][j][1], lcs_simp[i][j][2], lcs_var_norm[i][j][2]]) 
+                    # line i, line j, max matching x 2, max matching var norm x 2, matched characters in indexes
+                    pairs.append([i, j, lcs_simp[i][j][0], lcs_simp[i][j][1], lcs_var_norm[i][j][0], lcs_var_norm[i][j][1], lcs_simp[i][j][2], lcs_var_norm[i][j][2], lcs_simp[i][j][3]])
                 else:
-                    pairs.append([i, j, lcs_simp[i][j][0], lcs_simp[i][j][1], 0, 0, lcs_simp[i][j][2], 0])
-               
+                    pairs.append([i, j, lcs_simp[i][j][0], lcs_simp[i][j][1], 0, 0, lcs_simp[i][j][2], 0, None])
+
         # sort 
         global alpha_param
         alpha_param = alpha
@@ -202,9 +204,9 @@ class FuzzyMatch:
         # match + score calculation 
         f1,f2={},{}
         match_results = []
-        tot_match = 0.0 
-        hor = 1.0 
-        created_id = created_id_offset 
+        tot_match = 0.0
+        hor = 1.0
+        created_id = created_id_offset
         for i in range(0, len(pairs)):
             x = pairs[i][0]
             y = pairs[i][1]
@@ -216,23 +218,26 @@ class FuzzyMatch:
                 # lcs report 
                 created_id += 1 # a common id to be created for the character to be matched
                 # print(x, y, " base ", base_output[x], " found ", found_output[y], "id ", created_id)
-                match_results.append([x, y]) # all the stack here, to be saved         
-                if char_match_style == "fuzzy": # for the code portion         
+                match_results.append([x, y]) # all the stack here, to be saved
+                if char_match_style == "fuzzy": # for the code portion/comment portion
                     setblueprint1 = self.place_uid_in_source_code(map_dict=map_dict1, setblueprint=setblueprint1, norm_code_line=x, uid=created_id)
                     setblueprint2 = self.place_uid_in_source_code(map_dict=map_dict2, setblueprint=setblueprint2, norm_code_line=y, uid=created_id)
-                elif char_match_style == "exact": # for the comment portion 
+                elif char_match_style == "exact": # for the comment portion
                     mem = {}
-                    mt = self.find_matched_char(a=base_output[x], b=found_output[y], i=0, j=0, mem=mem)
+                    if pairs[i][-1] is not None:
+                        mt = pairs[i][-1] # dp already calculated, the positions
+                    else: # from raw matching
+                        mt = self.find_matched_char(a=base_output[x], b=found_output[y], i=0, j=0, mem=mem)
                     #print("mt = ", mt)
                     #print("base ", base_output[x], len(base_output[x]))
                     #print("found ", found_output[y], len(found_output[y]))
                     if len(mt) > 0:
-                        base_mt, found_mt = [], [] # going to separate the terms 
+                        base_mt, found_mt = [], [] # going to separate the terms for two lines
                         c1, c2 = "", ""
                         for k in range(0, len(mt)):
                             if len(mt[k]) == 2:
                                 base_mt.append(mt[k][0])
-                                found_mt.append(mt[k][1]) 
+                                found_mt.append(mt[k][1])
                                 # print("CAME ", x, len(base_output), base_output[x], k,  mt[k])
                                 c1 += base_output[x][mt[k][0]]
                                 c2 += found_output[y][mt[k][1]]
@@ -247,17 +252,18 @@ class FuzzyMatch:
         return similarity, match_results, setblueprint1, setblueprint2, created_id
 
     def find_matched_char(self, a="", b="", i=0, j=0, mem={}):
+        # which characters (actually positions) got matched between a and b
         #print("i = ", i, j, a, b, mem)
         if i == len(a) or j == len(b):
             #print("returning ")
-            return [] 
+            return []
         if mem.get(i) is not None and mem[i].get(j) is not None:
             #print("dhuke gese")
             return mem[i][j]
         if mem.get(i) is None:
             mem[i] = {}
         if mem[i].get(j) is None:
-            mem[i][j] = [] # just for local saving 
+            mem[i][j] = [] # just for local saving
         if a[i] == b[j]:
             temp = []
             temp.append([i,j])
@@ -265,19 +271,35 @@ class FuzzyMatch:
             st = self.find_matched_char(a=a, b=b, i=i+1, j=j+1, mem=mem)
             for k in range(0, len(st)):
                 if len(st[k]) == 2:
-                    temp.append([st[k][0], st[k][1]])     
-            mem[i][j] = temp 
+                    temp.append([st[k][0], st[k][1]])
+            mem[i][j] = temp
         else:
             st1 = self.find_matched_char(a=a, b=b, i=i+1, j=j, mem=mem)
-            st2 = self.find_matched_char(a=a, b=b, i=i, j=j+1, mem=mem) 
+            st2 = self.find_matched_char(a=a, b=b, i=i, j=j+1, mem=mem)
             if len(st1) > len(st2):
-                ms = st1 
+                ms = st1
             else:
-                ms = st2 
+                ms = st2
             for k in range(0, len(ms)):
                 if len(ms[k]) == 2:
                     mem[i][j].append([ms[k][0], ms[k][1]])
-        return mem[i][j] 
+        return mem[i][j]
+
+    def find_matched_character_without_dp(self, dp={}, a="", b=""):
+        stored_result = []
+        i = len(a)-1
+        j = len(b)-1
+        while i >= 0 and j >= 0:
+            if a[i] == b[j]:
+                stored_result.append([i, j])
+                i = i-1
+                j = j -1
+            if dp[i][j-1] > dp[i-1][j]:
+                j = j-1
+            else:
+                i = i-1
+
+
 
     def path_generation(self, lcs_results_array, i, j, _list):
         value = 0

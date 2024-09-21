@@ -7,7 +7,50 @@ class LCS:
         self.dp.clear()
         self.path.clear()
 
+    def matched_indexes(self, M, N, dp):
+        stored_result = []
+        i = len(M)-1
+        j = len(j)-1
+        while i >= 0 and j >= 0:
+            if a[i-1] == b[j-1]:
+                stored_result.append([i, j])
+                i = i-1
+                j = j-1
+            if dp[(i+1)%2][j-1] > dp[(i-1)%2][j]:
+                j = j-1
+            else:
+                i = i-1
+
     def recursion(self, i, j, M, N):
+        local_dp = {}
+        m , n = len(M), len(N)
+        for i in range(0, len(M)+1):
+            local_dp[i] = {}
+            for j in range(0, len(N)+1):
+                local_dp[i][j] = 0 
+        for i in range(0, len(N)+1):
+            local_dp[0][i] = 0 
+        for i in range(0, len(M)+1):
+            local_dp[i][0] = 0 
+        for i in range(0, len(M)):
+            for j in range(0, len(N)):
+                if M[i] == N[j]:
+                    local_dp[i+1][j+1] = 1 + local_dp[i][j]
+                else:
+                    local_dp[i+1][j+1] = max(local_dp[i][j+1], local_dp[i+1][j])
+        i, j = len(M), len(N)
+        matches = []
+        while i > 0 and j > 0:
+            if M[i-1] == N[j-1]:
+                matches.append([i-1, j-1]) # storing the characters here 
+                i = i-1
+                j = j-1
+            elif local_dp[i-1][j] >= local_dp[i][j-1]:
+                i = i-1
+            else:
+                j = j-1
+        return local_dp[len(M)][len(N)], matches
+                
         local_dp = [[], []]
         m , n = len(M), len(N)
         for i in range(0, n+1):

@@ -73,7 +73,7 @@ def word_by_word_match(text1=[], st1=0, en1=0, text2=[], st2=0, en2=0, norm_line
                 continue 
             flag = string_match(pattern=text1[i], text=text2, st_idx=j)
             if flag is True: # string matching 
-                # fully word matched, now make the character by charater matching 
+                # fully word matched, now make the character by character matching
                 for k in range(0, len(text1[i])):
                     text1_ptr += 1
                     matched_pairs[text1_ptr] = j 
@@ -114,7 +114,8 @@ def character_map(text1="", st1=0, en1=0, text2="", st2=0, en2=0):
                 break  
             else:
                 return i, j+1, matched_pairs # valid character did not match (i should match with someone, lets try with increase j)
-    return i, j, matched_pairs  
+    return i, j, matched_pairs
+
 
 def map_source_norm(source_code_lines=[], norm_code_lines = [], already_mapped_sr={}):
     i, j, i_mv_ptr, j_mv_ptr = 0, 0, 0, 0 
@@ -129,7 +130,7 @@ def map_source_norm(source_code_lines=[], norm_code_lines = [], already_mapped_s
         #print("i_mv_ptr j_mv_ptr ",i_mv_ptr, j_mv_ptr)
         #print("matched_pairs ", matched_pairs)
         if map_dict.get(i) is None:
-                map_dict[i] = {} 
+            map_dict[i] = {}
         for new_ent in matched_pairs:
             map_dict[i][new_ent] = [j, matched_pairs[new_ent]]
         if i_mv_ptr >= len(sparse_norm_code_lines):
@@ -140,6 +141,7 @@ def map_source_norm(source_code_lines=[], norm_code_lines = [], already_mapped_s
             j_mv_ptr = 0  
     # print_matched_fragments(norm_code_lines=norm_code_lines, map_dict=map_dict)
     return map_dict, already_mapped_sr
+
 
 def return_char_num_in_main_code(map_dict={}, line_no_in_norm=0, char_number=0):
     """

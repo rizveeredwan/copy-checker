@@ -600,13 +600,19 @@ def normalize(code_file=""):
     if lang == "python":
         # if its python, want to upgrade the code lines differently here, a more normalized code version
         # AST based code_lines will be formed for python with single line comments
-        ast_based_normalization = AstBasedNormalization()
-        generated_code, code_lines_py, single_line_comments_py = ast_based_normalization.norm_code(
-            file_name=code_file, var_norm=False, lang=lang)
-        generated_code, var_r_code_lines, _ = ast_based_normalization.norm_code(
-            file_name=code_file, var_norm=True, lang=lang)
-        code_lines = code_lines_py
-        single_line_comments_ast_module = single_line_comments_py
+        try:
+            ast_based_normalization = AstBasedNormalization()
+            generated_code, code_lines_py, single_line_comments_py = ast_based_normalization.norm_code(
+                file_name=code_file, var_norm=False, lang=lang)
+            generated_code, var_r_code_lines, _ = ast_based_normalization.norm_code(
+                file_name=code_file, var_norm=True, lang=lang)
+            code_lines = code_lines_py
+            single_line_comments_ast_module = single_line_comments_py
+        except Exception as e:
+            print(e)
+            # Going to move into default mode
+            code_lines = space_wise_clean_code(file_name=code_file)
+
     else:
         # 0: just making single space
         code_lines = space_wise_clean_code(file_name = code_file)
